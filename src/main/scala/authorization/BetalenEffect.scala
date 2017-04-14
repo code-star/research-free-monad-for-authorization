@@ -15,16 +15,16 @@ object BetalenEffect {
       fa.map(f)
   }
 
-  def getRekeningById(id: Int): Free[BetalenEffect, Option[Rekening]] =
+  def getRekeningById(id: Int): BetalenEffectF[Option[Rekening]] =
     Free.liftF(GetRekeningById(id, identity))
 
-  def getAllRekeningen(filter: Option[Set[Int]] = None): Free[BetalenEffect, Seq[Rekening]] =
+  def getAllRekeningen(filter: Option[Set[Int]] = None): BetalenEffectF[Seq[Rekening]] =
     Free.liftF(GetAllRekeningen(filter, identity))
 
-  def getBetaalopdracht(id: Int): Free[BetalenEffect, Option[Betaalopdracht]] =
+  def getBetaalopdracht(id: Int): BetalenEffectF[Option[Betaalopdracht]] =
     Free.liftF(GetBetaalopdracht(id, identity))
 
-  def shortCircuit[A]: Free[BetalenEffect, A] =
+  def shortCircuit[A]: BetalenEffectF[A] =
     Free.liftF(ShortCircuit[A]())
 }
 

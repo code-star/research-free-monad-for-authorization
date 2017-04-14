@@ -1,6 +1,6 @@
 package interpreters
 
-import authorization.BetalenEffect
+import authorization.{BetalenEffect, BetalenEffectF}
 import cats.free.Free
 import tolk.Tolk
 
@@ -11,7 +11,7 @@ import scala.concurrent.Future
   */
 class GoForItInterpreter extends Interpreter {
 
-  override def interpret[A](betalenEffect: BetalenEffect[Free[BetalenEffect, A]]): Future[A] = {
+  override def interpret[A](betalenEffect: BetalenEffect[BetalenEffectF[A]]): Future[A] = {
     Tolk.interpret(this, betalenEffect)
   }
 }

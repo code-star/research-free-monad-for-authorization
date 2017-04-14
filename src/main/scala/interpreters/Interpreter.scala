@@ -1,6 +1,6 @@
 package interpreters
 
-import authorization.BetalenEffect
+import authorization.{BetalenEffect, BetalenEffectF}
 import cats.free.Free
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -12,5 +12,5 @@ import scala.reflect.runtime.universe._
   */
 trait Interpreter {
 
-  def interpret[A](betalenEffect: BetalenEffect[Free[BetalenEffect, A]]): Future[A]
+  def interpret[A](betalenEffect: BetalenEffect[BetalenEffectF[A]]): Future[A]
 }

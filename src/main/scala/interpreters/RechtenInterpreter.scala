@@ -15,7 +15,7 @@ import cats.syntax.semigroup._
   */
 class RechtenInterpreter(val rekeningFilter: Set[Int]) extends Interpreter {
 
-  override def interpret[A](betalenEffect: BetalenEffect[Free[BetalenEffect, A]]): Future[A] = {
+  override def interpret[A](betalenEffect: BetalenEffect[BetalenEffectF[A]]): Future[A] = {
 
     betalenEffect match {
       case GetRekeningById(id, _) =>
@@ -29,7 +29,7 @@ class RechtenInterpreter(val rekeningFilter: Set[Int]) extends Interpreter {
         Tolk.interpret(this, GetAllRekeningen(filter |+| Some(rekeningFilter), fn))
 
       case GetBetaalopdracht(id, fn) =>
-        def shortCircuitIfNoAuthorization(boOpt: Option[Betaalopdracht]): Free[BetalenEffect, A] =
+        def shortCircuitIfNoAuthorization(boOpt: Option[Betaalopdracht]): BetalenEffectF[A] =
           boOpt match {
             case Some(bo) if !(rekeningFilter contains bo.rekeningId) => BetalenEffect.shortCircuit
             case _ => fn(boOpt)

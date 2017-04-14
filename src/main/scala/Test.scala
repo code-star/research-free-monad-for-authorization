@@ -1,4 +1,4 @@
-import authorization.BetalenEffect
+import authorization.{BetalenEffect, BetalenEffectF}
 import authorization.BetalenEffect._
 import cats.free.Free
 import interpreters.{GoForItInterpreter, Interpreter, RechtenInterpreter}
@@ -27,7 +27,7 @@ object Test {
     print(gointerpreter, ast)
   }
 
-  def print[A](interpreter: Interpreter, ast: Free[BetalenEffect, A]): Unit = {
+  def print[A](interpreter: Interpreter, ast: BetalenEffectF[A]): Unit = {
     val result = Tolk.reallyInterpret(interpreter, ast)
 
     result.andThen {

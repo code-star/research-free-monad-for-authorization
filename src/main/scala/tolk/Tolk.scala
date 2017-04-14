@@ -13,7 +13,7 @@ object Tolk {
   val rekeningRepo = new RekeningRepo
   val betaalopdrachtRepo = new BetaalopdrachtRepo
 
-  def interpret[A](interpreter: Interpreter, betalenEffect: BetalenEffect[Free[BetalenEffect, A]]): Future[A] = {
+  def interpret[A](interpreter: Interpreter, betalenEffect: BetalenEffect[BetalenEffectF[A]]): Future[A] = {
 
    betalenEffect match {
       case GetRekeningById(id, fn) =>
@@ -30,14 +30,14 @@ object Tolk {
     }
   }
 
-  def reallyInterpret[A](interpreter: Interpreter, betalenEffect: Free[BetalenEffect, A]): Future[A] = {
+  def reallyInterpret[A](interpreter: Interpreter, betalenEffect: BetalenEffectF[A]): Future[A] = {
     betalenEffect.fold(
       a => Future.successful(a),
       interpreter.interpret
     )
   }
 
-  def doTheRest[I, A](interpreter: Interpreter, fut: Future[I], f: I => Free[BetalenEffect, A]): Future[A] = {
+  def doTheRest[I, A](interpreter: Interpreter, fut: Future[I], f: I => BetalenEffectF[A]): Future[A] = {
     fut.map(f).flatMap(reallyInterpret(interpreter, _))
   }
 }
