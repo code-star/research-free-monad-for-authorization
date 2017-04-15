@@ -1,43 +1,33 @@
 package interpreters
 
 import authorization._
-import cats.free.Free
+import cats.syntax.semigroup._
+import cats.~>
 import domain.Betaalopdracht
+import interpreters.MrMonoid._
 import tolk.Tolk
 
-import scala.concurrent.Future
-import scala.reflect.runtime.universe._
-import MrMonoid._
-import cats.syntax.semigroup._
+import scala.concurrent.{ExecutionContext, Future}
 
-/**
-  * Created by wgr21717 on 14/04/2017.
-  */
-class RechtenInterpreter(val rekeningFilter: Set[Int]) extends Interpreter {
+object RechtenInterpreter {
 
-  override def interpret[A](betalenEffect: BetalenEffect[Free[BetalenEffect, A]]): Future[A] = {
-
-    betalenEffect match {
-      case GetRekeningById(id, _) =>
-
-        if (rekeningFilter contains id)
-          Tolk.interpret(this, betalenEffect)
+  def interpreter(authorizedForRekeningIds: Set[Int])(implicit ec: ExecutionContext): (BetalenEffect ~> Future) = new (BetalenEffect ~> Future) {
+    override def apply[A](betalenEffect: BetalenEffect[A]): Future[A] = betalenEffect match {
+      case GetRekeningById(id) =>
+        if (authorizedForRekeningIds contains id)
+          Tolk.interpreter(betalenEffect)
         else
-          Future.failed(new IllegalStateException("oh noes"))
+          Future.successful(None)
 
-      case GetAllRekeningen(filter, fn) =>
-        Tolk.interpret(this, GetAllRekeningen(filter |+| Some(rekeningFilter), fn))
+      case GetAllRekeningen(rekeningIdFilter) =>
+        Tolk.interpreter(GetAllRekeningen(rekeningIdFilter |+| Some(authorizedForRekeningIds)))
 
-      case GetBetaalopdracht(id, fn) =>
-        def shortCircuitIfNoAuthorization(boOpt: Option[Betaalopdracht]): Free[BetalenEffect, A] =
-          boOpt match {
-            case Some(bo) if !(rekeningFilter contains bo.rekeningId) => BetalenEffect.shortCircuit
-            case _ => fn(boOpt)
-          }
-        Tolk.interpret(this, GetBetaalopdracht(id, shortCircuitIfNoAuthorization))
-
-      case ShortCircuit() =>
-        Tolk.interpret(this, betalenEffect)
+      case gb @ GetBetaalopdracht(id) =>
+        val betaalopdrachtOptFut: Future[Option[Betaalopdracht]] = Tolk.interpreter(gb)
+        betaalopdrachtOptFut map {
+          case Some(bo) if !(authorizedForRekeningIds contains bo.rekeningId) => None
+          case other => other
+        }
     }
   }
 }

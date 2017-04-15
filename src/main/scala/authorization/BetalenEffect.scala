@@ -1,51 +1,27 @@
 package authorization
 
-import cats.Functor
 import cats.free.Free
 import domain.{Betaalopdracht, Rekening}
 
-sealed trait BetalenEffect[+A] {
-  def map[B](mapping: A => B): BetalenEffect[B]
-}
+sealed trait BetalenEffect[A]
 
 object BetalenEffect {
 
-  implicit val betalenEffectFunctor: Functor[BetalenEffect] = new Functor[BetalenEffect] {
-    override def map[A, B](fa: BetalenEffect[A])(f: (A) => B): BetalenEffect[B] =
-      fa.map(f)
-  }
-
   def getRekeningById(id: Int): Free[BetalenEffect, Option[Rekening]] =
-    Free.liftF(GetRekeningById(id, identity))
+    Free.liftF(GetRekeningById(id))
 
   def getAllRekeningen(filter: Option[Set[Int]] = None): Free[BetalenEffect, Seq[Rekening]] =
-    Free.liftF(GetAllRekeningen(filter, identity))
+    Free.liftF(GetAllRekeningen(filter))
 
   def getBetaalopdracht(id: Int): Free[BetalenEffect, Option[Betaalopdracht]] =
-    Free.liftF(GetBetaalopdracht(id, identity))
-
-  def shortCircuit[A]: Free[BetalenEffect, A] =
-    Free.liftF(ShortCircuit[A]())
+    Free.liftF(GetBetaalopdracht(id))
 }
 
 // We know which authorization we need beforehand.
-final case class GetRekeningById[+A](id: Int, f: Option[Rekening] => A) extends BetalenEffect[A] {
-  override def map[B](mapping: (A) => B): BetalenEffect[B] =
-    GetRekeningById(id, f andThen mapping)
-}
+final case class GetRekeningById(id: Int) extends BetalenEffect[Option[Rekening]]
 
 // We need to incorporate authorization in the database query.
-final case class GetAllRekeningen[+A](filter: Option[Set[Int]], f: (Seq[Rekening]) => A) extends BetalenEffect[A] {
-  override def map[B](mapping: (A) => B): BetalenEffect[B] =
-    GetAllRekeningen(filter, f andThen mapping)
-}
+final case class GetAllRekeningen(filter: Option[Set[Int]]) extends BetalenEffect[Seq[Rekening]]
 
 // We only know if we can get this `Betaalopdracht` in hindsight.
-final case class GetBetaalopdracht[+A](id: Int, f: Option[Betaalopdracht] => A) extends BetalenEffect[A] {
-  override def map[B](mapping: (A) => B): BetalenEffect[B] =
-    GetBetaalopdracht(id, f andThen mapping)
-}
-
-final case class ShortCircuit[A]() extends BetalenEffect[A] {
-  override def map[B](mapping: (A) => B): BetalenEffect[B] = ShortCircuit()
-}
+final case class GetBetaalopdracht(id: Int) extends BetalenEffect[Option[Betaalopdracht]]

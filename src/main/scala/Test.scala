@@ -1,18 +1,17 @@
 import authorization.BetalenEffect
 import authorization.BetalenEffect._
 import cats.free.Free
-import interpreters.{GoForItInterpreter, Interpreter, RechtenInterpreter}
-import tolk.Tolk
+import cats.~>
+import interpreters.{GoForItInterpreter, RechtenInterpreter}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import cats.instances.future._
+import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 object Test {
 
   val authorizedForRekeningen = Set(2, 4)
-
-  val rechteninterpreter = new RechtenInterpreter(authorizedForRekeningen)
-  val gointerpreter = new GoForItInterpreter
 
   def main(args: Array[String]): Unit = {
 
@@ -23,14 +22,15 @@ object Test {
       rekening <- getRekeningById(firstId)
     } yield (betaalopdracht, allRekeningen, rekening)
 
-    print(rechteninterpreter, ast)
-    print(gointerpreter, ast)
+    print(GoForItInterpreter.interpreter, ast)
+    print(RechtenInterpreter.interpreter(authorizedForRekeningen), ast)
+
+    // Make sure both threads finish.
+    Thread.sleep(10 * 1000)
   }
 
-  def print[A](interpreter: Interpreter, ast: Free[BetalenEffect, A]): Unit = {
-    val result = Tolk.reallyInterpret(interpreter, ast)
-
-    result.andThen {
+  def print[A](naturalTransformation: BetalenEffect ~> Future, ast: Free[BetalenEffect, A]): Unit = {
+    ast.foldMap(naturalTransformation).andThen {
       case Success(l) => println(l)
       case Failure(e) => e.printStackTrace()
     }
