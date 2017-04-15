@@ -6,10 +6,9 @@ import repo.{BetaalopdrachtRepo, RekeningRepo}
 
 import scala.concurrent.Future
 
-object Tolk {
+class Tolk(rekeningRepo: RekeningRepo) {
 
-  // Pretend we get these instances injected:
-  val rekeningRepo = new RekeningRepo
+  // Pretend we get this instance injected:
   val betaalopdrachtRepo = new BetaalopdrachtRepo
 
   def interpreter: (BetalenEffect ~> Future) = new (BetalenEffect ~> Future) {
@@ -20,6 +19,8 @@ object Tolk {
         rekeningRepo.getAll(rekeningIdFilter)
       case GetBetaalopdracht(id) =>
         betaalopdrachtRepo.getById(id)
+      case FromFuture(fut) =>
+        fut
     }
   }
 }

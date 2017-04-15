@@ -6,6 +6,9 @@ import interpreters.{GoForItInterpreter, RechtenInterpreter}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import cats.instances.future._
+import domain.{Betaalopdracht, Rekening}
+import repo.RekeningRepo
+
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
@@ -15,18 +18,25 @@ object Test {
 
   def main(args: Array[String]): Unit = {
 
+    var rekeningRepo = new RekeningRepo
+    print(new GoForItInterpreter(rekeningRepo).interpreter, getAst(rekeningRepo))
+
+    rekeningRepo = new RekeningRepo
+    print(new RechtenInterpreter(rekeningRepo).interpreter(authorizedForRekeningen), getAst(rekeningRepo))
+
+    // Make sure both threads finish.
+    Thread.sleep(10 * 1000)
+  }
+
+  private def getAst(rekeningRepo: RekeningRepo) = {
     val ast = for {
+      _ <- fromFuture(rekeningRepo.delete(3, authorizedForRekeningen))
       betaalopdracht <- getBetaalopdracht(3)
       allRekeningen <- getAllRekeningen()
       firstId = allRekeningen.head.id
       rekening <- getRekeningById(firstId)
     } yield (betaalopdracht, allRekeningen, rekening)
-
-    print(GoForItInterpreter.interpreter, ast)
-    print(RechtenInterpreter.interpreter(authorizedForRekeningen), ast)
-
-    // Make sure both threads finish.
-    Thread.sleep(10 * 1000)
+    ast
   }
 
   def print[A](naturalTransformation: BetalenEffect ~> Future, ast: Free[BetalenEffect, A]): Unit = {

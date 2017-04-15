@@ -6,7 +6,7 @@ import scala.concurrent.Future
 
 class BetaalopdrachtRepo {
 
-  private val allBetaalopdrachten = Seq(
+  private var allBetaalopdrachten = Seq(
     Betaalopdracht(1, 1),
     Betaalopdracht(2, 2),
     Betaalopdracht(3, 3),

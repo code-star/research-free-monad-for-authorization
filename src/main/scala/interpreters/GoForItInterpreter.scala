@@ -2,11 +2,12 @@ package interpreters
 
 import authorization.BetalenEffect
 import cats.~>
+import repo.RekeningRepo
 import tolk.Tolk
 
 import scala.concurrent.Future
 
-object GoForItInterpreter {
+class GoForItInterpreter(rekeningRepo: RekeningRepo) {
 
-  def interpreter: (BetalenEffect ~> Future) = Tolk.interpreter
+  def interpreter: (BetalenEffect ~> Future) = new Tolk(rekeningRepo).interpreter
 }
