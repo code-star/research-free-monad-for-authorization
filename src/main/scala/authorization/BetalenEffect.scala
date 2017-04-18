@@ -1,25 +1,31 @@
 package authorization
 
-import cats.free.Free
+import cats.free.{Free, Inject}
 import domain.{Betaalopdracht, Rekening}
 
 import scala.concurrent.Future
+import free.inject
 
 sealed trait BetalenEffect[A]
 
-object BetalenEffect {
+class BetalenEffects[F[_]](implicit i: Inject[BetalenEffect, F]) {
 
-  def getRekeningById(id: Int): Free[BetalenEffect, Option[Rekening]] =
-    Free.liftF(GetRekeningById(id))
+  def getRekeningById(id: Int): Free[F, Option[Rekening]] =
+    inject(GetRekeningById(id))
 
-  def getAllRekeningen(filter: Option[Set[Int]] = None): Free[BetalenEffect, Seq[Rekening]] =
-    Free.liftF(GetAllRekeningen(filter))
+  def getAllRekeningen(filter: Option[Set[Int]] = None): Free[F, Seq[Rekening]] =
+    inject(GetAllRekeningen(filter))
 
-  def getBetaalopdracht(id: Int): Free[BetalenEffect, Option[Betaalopdracht]] =
-    Free.liftF(GetBetaalopdracht(id))
+  def getBetaalopdracht(id: Int): Free[F, Option[Betaalopdracht]] =
+    inject(GetBetaalopdracht(id))
 
-  def fromFuture[A](fut: Future[A]): Free[BetalenEffect, A] =
-    Free.liftF(FromFuture(fut))
+  def fromFuture[A](fut: Future[A]): Free[F, A] =
+    inject(FromFuture(fut): BetalenEffect[A])
+}
+
+object BetalenEffects {
+  implicit def betalenEffects[F[_]](implicit i: Inject[BetalenEffect, F]): BetalenEffects[F] =
+    new BetalenEffects
 }
 
 // We know which authorization we need beforehand.
