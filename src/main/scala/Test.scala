@@ -12,7 +12,8 @@ import scala.util.{Failure, Success}
 
 object Test {
 
-  type Effect[A] = Coproduct[BetalenEffect, LogEffect, A]
+  type LogOrInterestingId[A] = Coproduct[LogEffect, InterestingIdEffect, A]
+  type Effect[A] = Coproduct[BetalenEffect, LogOrInterestingId, A]
 
   val authorizedForRekeningen = Set(2, 4)
 
@@ -22,6 +23,13 @@ object Test {
         println("Logging: " + v)
         Future.successful(())
       }
+    }
+  }
+
+  def interestingIdEffectNaturalTransformation: (InterestingIdEffect ~> Future) = new (InterestingIdEffect ~> Future) {
+    override def apply[A](fa: InterestingIdEffect[A]): Future[A] = fa match {
+      case InterestingId(id) =>
+        Future.successful(id)
     }
   }
 
@@ -37,7 +45,7 @@ object Test {
     Thread.sleep(10 * 1000)
   }
 
-  private def getAst(rekeningRepo: RekeningRepo)(implicit be: BetalenEffects[Effect], le: LogEffects[Effect]) = {
+  private def getAst(rekeningRepo: RekeningRepo)(implicit be: BetalenEffects[Effect], le: LogEffects[Effect], ide: InterestingIdEffects[Effect]) = {
     val ast = for {
       _ <- be.fromFuture(rekeningRepo.delete(3, authorizedForRekeningen))
       _ <- le.log("Delete rekening with id 3")
@@ -49,7 +57,8 @@ object Test {
       _ <- le.log("Get all rekeningen")
 
       firstId = allRekeningen.head.id
-      rekening <- be.getRekeningById(firstId)
+      interestingId <- ide.interestingId(firstId)
+      rekening <- be.getRekeningById(interestingId)
       _ <- le.log("Get rekening with id " + firstId)
     } yield (betaalopdracht, allRekeningen, rekening)
     ast
@@ -59,7 +68,8 @@ object Test {
                 betalenEffectNaturalTransformation: BetalenEffect ~> Future,
                 logEffectNaturalTransformation: LogEffect ~> Future,
                 ast: Free[Effect, A]): Unit = {
-    ast.foldMap(betalenEffectNaturalTransformation or logEffectNaturalTransformation).andThen {
+    val x: (LogOrInterestingId ~> Future) = logEffectNaturalTransformation or interestingIdEffectNaturalTransformation
+    ast.foldMap(betalenEffectNaturalTransformation or x).andThen {
       case Success(l) => println(l)
       case Failure(e) => e.printStackTrace()
     }
